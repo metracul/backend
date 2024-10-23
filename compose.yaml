@@ -1,0 +1,6 @@
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    networks:
+      - isolated-network
