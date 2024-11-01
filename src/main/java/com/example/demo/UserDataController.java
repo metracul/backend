@@ -8,15 +8,20 @@ import org.springframework.web.bind.annotation.*;
 public class UserDataController {
 
     @Autowired
-    private UserDataRepository userDataRepository;
+    private UserDataService userDataService;
+
+    @PostMapping("/updateBalance")
+    public UserData updateBalance(@RequestParam Long userId, @RequestParam int clicks) {
+        return userDataService.updateUserBalance(userId, clicks);
+    }
 
     @PostMapping("/save")
     public UserData saveUserData(@RequestBody UserData userData) {
-        return userDataRepository.save(userData);
+        return userDataService.saveUserData(userData);
     }
 
     @GetMapping("/load")
     public UserData loadUserData(@RequestParam Long userId) {
-        return userDataRepository.findById(userId).orElse(null);
+        return userDataService.loadUserData(userId);
     }
 }
