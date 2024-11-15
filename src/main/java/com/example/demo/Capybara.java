@@ -73,4 +73,5 @@ public class Capybara {
     public void setTap(int tap) {
         this.tap = tap;
     }
+    
 }

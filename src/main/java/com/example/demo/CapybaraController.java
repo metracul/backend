@@ -19,6 +19,12 @@ public class CapybaraController {
     private CapybaraService capybaraService;
     @Autowired
     private UserDataService userDataService;
+    @Autowired
+    private CapybaraRepository capybaraRepository;
+    
+    public Integer getCapybaraCost(Long capybaraId) {
+        return capybaraRepository.findCapyCostById(capybaraId);
+    }
 
     @PostMapping("/create")
     public Capybara createCapybara(@RequestParam String name) {
@@ -47,21 +53,23 @@ public class CapybaraController {
         }
         return ResponseEntity.ok(response);
     }
-
+    
     @PostMapping("/sell")
     public ResponseEntity<Map<String, Object>> sellCapybara(@RequestBody DTOsellRequest entity) {
         Map<String, Object> response = new HashMap<>();
-        Integer balance = userDataService.loadUserBalance(entity.getId());
+        Integer balance = entity.getBalance();
+        Integer cost = getCapybaraCost(entity.getId());
         try {
             userDataService.deleteCapybaraToUser(entity.getVkId(), entity.getId());
             capybaraService.deleteCapybaraById(entity.getId());
+            userDataService.updateUserBalance(entity.getVkId(), balance+cost);
             response.put("result", "success");
             
         } catch (Exception e) {
             response.put("result", "error");
-            response.put("msg", "Недостаточно средств на балансе:(");
+            response.put("msg", "неизвестная ошибка");
         }
-        
+
         return ResponseEntity.ok(response);
     }
 }

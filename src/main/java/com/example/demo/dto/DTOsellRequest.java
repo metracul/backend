@@ -4,7 +4,14 @@ public class DTOsellRequest {
     
     private Long id;
     private int balance;
+    private Long vkId;
 
+    public Long getVkId() {
+        return vkId;
+    }
+    public void setVkId(Long vkId) {
+        this.vkId = vkId;
+    }
     public Long getId() {
         return id;
     }
