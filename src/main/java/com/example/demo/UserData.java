@@ -2,32 +2,84 @@ package com.example.demo;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "user_data")
 public class UserData {
 
     @Id
-    private Long userId; // userId передается от клиента, а не генерируется автоматически
+    @Column(name = "vk_id")
+    private Long vkId;
 
-    private int balance; // Баланс пользователя
-    private int capybaraCount; // Количество капибар у пользователя
-    private LocalDateTime lastLoginTime; // Время последнего входа пользователя
+    @Column(name = "capybaras", columnDefinition = "integer[]")
+    private Integer[] capybaras;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private List<Capybara> capybaraList = new ArrayList<>(); // Список капибар у пользователя
+    @Column(name = "lake_id")
+    private int lakeId;
 
-    // Геттеры и сеттеры
+    @Column(name = "devil_id")
+    private int devilId;
 
-    public Long getUserId() {
-        return userId;
+    @Column(name = "background")
+    private int background;
+
+    @Column(name = "lake_status")
+    private int lakeStatus;
+
+    @Column(name = "balance")
+    private int balance;
+
+    @Column(name = "lake_ticks_left")
+    private LocalDateTime lakeTicksLeft;
+
+    // Getters and Setters
+
+    public Long getVkId() {
+        return vkId;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setVkId(Long vkId) {
+        this.vkId = vkId;
+    }
+
+    public Integer[] getCapybaras() {
+        return capybaras;
+    }
+
+    public void setCapybaras(Integer[] capybaras) {
+        this.capybaras = capybaras;
+    }
+
+    public int getLakeId() {
+        return lakeId;
+    }
+
+    public void setLakeId(int lakeId) {
+        this.lakeId = lakeId;
+    }
+
+    public int getDevilId() {
+        return devilId;
+    }
+
+    public void setDevilId(int devilId) {
+        this.devilId = devilId;
+    }
+
+    public int getBackground() {
+        return background;
+    }
+
+    public void setBackground(int background) {
+        this.background = background;
+    }
+
+    public int getLakeStatus() {
+        return lakeStatus;
+    }
+
+    public void setLakeStatus(int lakeStatus) {
+        this.lakeStatus = lakeStatus;
     }
 
     public int getBalance() {
@@ -38,27 +90,12 @@ public class UserData {
         this.balance = balance;
     }
 
-    public int getCapybaraCount() {
-        return capybaraCount;
+    public LocalDateTime getLakeTicksLeft() {
+        return lakeTicksLeft;
     }
 
-    public void setCapybaraCount(int capybaraCount) {
-        this.capybaraCount = capybaraCount;
+    public void setLakeTicksLeft(LocalDateTime lakeTicksLeft) {
+        this.lakeTicksLeft = lakeTicksLeft;
     }
-
-    public LocalDateTime getLastLoginTime() {
-        return lastLoginTime;
-    }
-
-    public void setLastLoginTime(LocalDateTime lastLoginTime) {
-        this.lastLoginTime = lastLoginTime;
-    }
-
-    public List<Capybara> getCapybaraList() {
-        return capybaraList;
-    }
-
-    public void setCapybaraList(List<Capybara> capybaraList) {
-        this.capybaraList = capybaraList;
-    }
+    
 }

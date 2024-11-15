@@ -1,0 +1,558 @@
+package com.example.demo;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class DemoApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+package com.example.demo.dto;
+
+public class DTOsellRequest {
+    
+    private Long id;
+    private int balance;
+
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public int getBalance() {
+        return balance;
+    }
+    public void setBalance(int balance) {
+        this.balance = balance;
+    }
+}package com.example.demo.dto;
+
+import com.example.demo.Proposal;
+
+public class DTObuyRequest {
+    
+    private Long id;
+    private Proposal proposal;
+    private int balance;
+
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public Proposal getProposal() {
+        return proposal;
+    }
+    public void setProposal(Proposal proposal) {
+        this.proposal = proposal;
+    }
+    public int getBalance() {
+        return balance;
+    }
+    public void setBalance(int balance) {
+        this.balance = balance;
+    }
+}
+package com.example.demo;
+
+import java.util.Optional;
+
+public class Proposal {
+    private int cost;
+    private String type;
+    private Optional<Capybara> capybaraValue = Optional.empty();
+    private Optional<Envel> envelValue = Optional.empty();
+
+    public int getCost(){
+        return cost;
+    }
+
+    public String getType(){
+        return type;
+    }
+
+    public void setCost(int cost) {
+        this.cost = cost;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public Optional<Capybara> getCapybaraValue() {
+        return capybaraValue;
+    }
+
+    public void setCapybaraValue(Capybara capybaraValue) {
+        this.capybaraValue = Optional.of(capybaraValue);
+        this.envelValue = Optional.empty();
+    }
+
+    public Optional<Envel> getEnvelValue() {
+        return envelValue;
+    }
+
+    public void setEnvelValue(Envel envelValue) {
+        this.envelValue = Optional.of(envelValue);
+        this.capybaraValue = Optional.empty();
+    }
+}
+package com.example.demo;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.example.demo.dto.DTObuyRequest;
+import com.example.demo.dto.DTOsellRequest;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/capybara")
+public class CapybaraController {
+
+    @Autowired
+    private CapybaraService capybaraService;
+    @Autowired
+    private UserDataService userDataService;
+
+    @PostMapping("/create")
+    public Capybara createCapybara(@RequestParam String name) {
+        return capybaraService.createCapybara(name);
+    }
+
+    @GetMapping("/all")
+    public List<Capybara> getAllCapybaras() {
+        return capybaraService.getAllCapybaras();
+    }
+    
+    @PostMapping("/buy")
+    public ResponseEntity<Map<String, Object>> buyCapybara(@RequestBody DTObuyRequest entity) {
+        Map<String, Object> response = new HashMap<>();
+        Integer balance = userDataService.loadUserBalance(entity.getId());
+        Capybara capybara;
+        if(entity.getProposal().getCost() <= balance){
+            response.put("result", "success");
+            capybara = capybaraService.createCapybara("NewCapy");
+            response.put("capybara", capybara);
+            userDataService.updateUserBalance(entity.getId(), balance-entity.getProposal().getCost());
+        }else{
+            response.put("result", "error");
+            response.put("msg", "Недостаточно средств на балансе:(");
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/sell")
+    public ResponseEntity<Map<String, Object>> sellCapybara(@RequestBody DTOsellRequest entity) {
+        Map<String, Object> response = new HashMap<>();
+        Integer balance = userDataService.loadUserBalance(entity.getId());
+        try {
+            capybaraService.deleteCapybaraById(entity.getId());
+            response.put("result", "success");
+            
+        } catch (Exception e) {
+            response.put("result", "error");
+            response.put("msg", "Недостаточно средств на балансе:(");
+        }
+        return ResponseEntity.ok(response);
+    }
+}package com.example.demo;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface CapybaraRepository extends JpaRepository<Capybara, Long> {
+
+    @Query("SELECT (h.cost + b.cost + l.cost) FROM Capybara c join head as h on c.head_id = h.id join body asb on c.head_id = b.id join legs as l on c.head_id = l.id WHERE c.capybaraId = :capyId")
+    Integer findCapyCostById(@Param("capyId") Long userId);
+
+}
+package com.example.demo;
+
+public class Envel {
+    
+}
+package com.example.demo;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Random;
+
+@Service
+public class CapybaraService {
+
+    @Autowired
+    private CapybaraRepository capybaraRepository;
+
+    private final Random random = new Random();
+
+    public Capybara createCapybara(String name) {
+        Capybara capybara = new Capybara();
+        capybara.setName(name);
+        capybara.setHead(getRandomHeadId());
+        capybara.setBody(getRandomBodyId());
+        capybara.setLegs(getRandomLegsId());
+        capybara.setCollection("none");
+        capybara.setTap(0);
+
+        return capybaraRepository.save(capybara);
+    }
+
+    // Метод для случайного выбора ID головы из доступных ID
+    private Integer getRandomHeadId() {
+        Integer[] headIds = {1, 2}; // Замените на актуальные ID из таблицы head
+        return headIds[random.nextInt(headIds.length)];
+    }
+
+    // Метод для случайного выбора ID тела из доступных ID
+    private Integer getRandomBodyId() {
+        Integer[] bodyIds = {1, 2}; // Замените на актуальные ID из таблицы body
+        return bodyIds[random.nextInt(bodyIds.length)];
+    }
+
+    // Метод для случайного выбора ID ног из доступных ID
+    private Integer getRandomLegsId() {
+        Integer[] legsIds = {1, 2}; // Замените на актуальные ID из таблицы legs
+        return legsIds[random.nextInt(legsIds.length)];
+    }
+
+    public List<Capybara> getAllCapybaras() {
+        return capybaraRepository.findAll();
+    }
+}package com.example.demo;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/user")
+public class UserDataController {
+
+    @Autowired
+    private UserDataService userDataService;
+
+    @PostMapping("/create")
+    public ResponseEntity<UserData> createUser(@RequestBody UserData userData) {
+    // Проверяем, что vk_id не пустой, и задаем его вручную, если это необходимо
+    if (userData.getVkId() == null) {
+        throw new RuntimeException("vk_id должен быть задан вручную.");
+    }
+
+    UserData savedUser = userDataService.saveUserData(userData);
+    return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+}
+
+    @PostMapping("/{userId}/addCapybara")
+    public UserData addCapybaraToUser(@PathVariable Long userId, @RequestParam Long capybaraId) {
+        return userDataService.addCapybaraToUser(userId, capybaraId);
+    }
+
+    @PostMapping("/updateBalance")
+    public UserData updateBalance(@RequestBody Map<String, Object> payload) {
+        if (!payload.containsKey("userId") || !payload.containsKey("clicks")) {
+            throw new IllegalArgumentException("Параметры userId и clicks обязательны.");
+        }
+        Long userId = ((Number) payload.get("userId")).longValue();
+        int clicks = (int) payload.get("clicks");
+        return userDataService.updateUserBalance(userId, clicks);
+    }
+
+    @PostMapping("/save")
+    public UserData saveUserData(@RequestBody UserData userData) {
+        return userDataService.saveUserData(userData);
+    }
+
+    @GetMapping("/load")
+    public UserData loadUserData(@RequestParam Long userId) {
+        return userDataService.loadUserData(userId);
+    }
+}package com.example.demo;
+
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import jakarta.transaction.Transactional;
+public interface UserDataRepository extends JpaRepository<UserData, Long> {
+    @Query("SELECT u.balance FROM UserData u WHERE u.userId = :userId")
+    Integer findUserBalanceById(@Param("userId") Long userId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE UserData u SET u.balance = :balance WHERE u.userId = :userId")
+    int updateUserBalance(@Param("userId") Long userId, @Param("balance") int balance);
+}
+package com.example.demo;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
+
+@Service
+public class UserDataService {
+
+    @Autowired
+    private UserDataRepository userDataRepository;
+
+    @Autowired
+    private CapybaraRepository capybaraRepository;
+
+    public UserData addCapybaraToUser(Long userId, Long capybaraId) {
+        UserData user = userDataRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+
+        Capybara capybara = capybaraRepository.findById(capybaraId)
+                .orElseThrow(() -> new RuntimeException("Капибара не найдена"));
+
+        Integer[] currentCapybaras = user.getCapybaras();
+        Integer[] newCapybaras = Arrays.copyOf(currentCapybaras, currentCapybaras.length + 1);
+        newCapybaras[newCapybaras.length - 1] = capybara.getId().intValue();
+        user.setCapybaras(newCapybaras);
+
+        return userDataRepository.save(user);
+    }
+
+    public UserData updateUserBalance(Long userId, int clicks) {
+        UserData user = userDataRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+        
+        int capybaraCount = user.getCapybaras() != null ? user.getCapybaras().length : 0;
+        int newBalance = user.getBalance() + (clicks * capybaraCount);
+        user.setBalance(newBalance);
+
+        return userDataRepository.save(user);
+    }
+    public Integer loadUserBalance(Long userId) {
+        return userDataRepository.findUserBalanceById(userId);
+    }
+    public UserData saveUserData(UserData userData) {
+        return userDataRepository.save(userData);
+    }
+
+    public UserData loadUserData(Long userId) {
+        return userDataRepository.findById(userId).orElse(null);
+    }
+}package com.example.demo;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "capybara")
+public class Capybara {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private Integer head;
+    private Integer body;
+    private Integer legs;
+    private String collection;
+    private int tap;
+
+    // Геттеры и сеттеры
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getHead() {
+        return head;
+    }
+
+    public void setHead(Integer head) {
+        this.head = head;
+    }
+
+    public Integer getBody() {
+        return body;
+    }
+
+    public void setBody(Integer body) {
+        this.body = body;
+    }
+
+    public Integer getLegs() {
+        return legs;
+    }
+
+    public void setLegs(Integer legs) {
+        this.legs = legs;
+    }
+
+    public String getCollection() {
+        return collection;
+    }
+
+    public void setCollection(String collection) {
+        this.collection = collection;
+    }
+
+    public int getTap() {
+        return tap;
+    }
+
+    public void setTap(int tap) {
+        this.tap = tap;
+    }
+}package com.example.demo;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.*;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("*") // Укажите конкретные домены в продакшене
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
+    }
+}
+package com.example.demo;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "user_data")
+public class UserData {
+
+    @Id
+    @Column(name = "vk_id")
+    private Long vkId;
+
+    @Column(name = "capybaras", columnDefinition = "integer[]")
+    private Integer[] capybaras;
+
+    @Column(name = "lake_id")
+    private int lakeId;
+
+    @Column(name = "devil_id")
+    private int devilId;
+
+    @Column(name = "background")
+    private int background;
+
+    @Column(name = "lake_status")
+    private int lakeStatus;
+
+    @Column(name = "balance")
+    private int balance;
+
+    @Column(name = "lake_ticks_left")
+    private LocalDateTime lakeTicksLeft;
+
+    // Getters and Setters
+
+    public Long getVkId() {
+        return vkId;
+    }
+
+    public void setVkId(Long vkId) {
+        this.vkId = vkId;
+    }
+
+    public Integer[] getCapybaras() {
+        return capybaras;
+    }
+
+    public void setCapybaras(Integer[] capybaras) {
+        this.capybaras = capybaras;
+    }
+
+    public int getLakeId() {
+        return lakeId;
+    }
+
+    public void setLakeId(int lakeId) {
+        this.lakeId = lakeId;
+    }
+
+    public int getDevilId() {
+        return devilId;
+    }
+
+    public void setDevilId(int devilId) {
+        this.devilId = devilId;
+    }
+
+    public int getBackground() {
+        return background;
+    }
+
+    public void setBackground(int background) {
+        this.background = background;
+    }
+
+    public int getLakeStatus() {
+        return lakeStatus;
+    }
+
+    public void setLakeStatus(int lakeStatus) {
+        this.lakeStatus = lakeStatus;
+    }
+
+    public int getBalance() {
+        return balance;
+    }
+
+    public void setBalance(int balance) {
+        this.balance = balance;
+    }
+
+    public LocalDateTime getLakeTicksLeft() {
+        return lakeTicksLeft;
+    }
+
+    public void setLakeTicksLeft(LocalDateTime lakeTicksLeft) {
+        this.lakeTicksLeft = lakeTicksLeft;
+    }
+}package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.context.annotation.ComponentScan;
+
+@SpringBootApplication
+@ComponentScan(basePackages = "com.example") 
+public class DemoApplication extends SpringBootServletInitializer {
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+}
+
